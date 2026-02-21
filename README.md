@@ -13,12 +13,6 @@ A comprehensive dashboard for AI Compliance Intelligence, featuring real-time po
 - JavaScript (Vanilla)
 - Three.js (for the 3D logo design and canvas elements)
 
-## Deployment (Vercel)
-This project is structured as a streamlined static single-page application (`index.html`) which can be deployed seamlessly to [Vercel](https://vercel.com/):
-1. Sign in to Vercel and click **Add New** > **Project**
-2. Import this GitHub repository (`paarthbhatt/Hackfest_Hackathon_Project`).
-3. Leave all Build and Output Settings as default.
-4. Click **Deploy**. Vercel will automatically serve `index.html` as the entry point.
 
 ## Local Development
 Since this is a static webpage with no build step required, you can simply clone this repository and open `index.html` in your favorite web browser:
