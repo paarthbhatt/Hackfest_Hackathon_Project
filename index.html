@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PolicyGuard — AI Compliance Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --bg: #020810;
+  --bg2: #060d1a;
+  --card: #080f1f;
+  --card2: #0c1428;
+  --border: #0f1e3a;
+  --border2: #162847;
+  --cyan: #00d4ff;
+  --cyan2: #00a8cc;
+  --cyan3: rgba(0,212,255,0.08);
+  --purple: #7c3aed;
+  --purple2: #a78bfa;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --text: #e2e8f4;
+  --text2: #94a3b8;
+  --muted: #334155;
+  --sidebar-w: 248px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;}
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+}
+
+/* ─── CANVAS ─── */
+#three-bg {
+  position: fixed; inset: 0;
+  z-index: 0; pointer-events: none;
+}
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; opacity: 0.5;
+}
+
+/* ─── AURORA ─── */
+.aurora {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+.aurora-1 {
+  position: absolute; width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+  top: -200px; right: -100px;
+  animation: auroraFloat1 12s ease-in-out infinite;
+}
+.aurora-2 {
+  position: absolute; width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%);
+  bottom: -150px; left: 100px;
+  animation: auroraFloat2 15s ease-in-out infinite;
+}
+.aurora-3 {
+  position: absolute; width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,212,255,0.04) 0%, transparent 70%);
+  top: 40%; left: 40%;
+  animation: auroraFloat3 18s ease-in-out infinite;
+}
+@keyframes auroraFloat1 { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(-60px,40px) scale(1.1);} 66%{transform:translate(40px,-30px) scale(0.95);} }
+@keyframes auroraFloat2 { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(80px,-60px) scale(1.15);} }
+@keyframes auroraFloat3 { 0%,100%{transform:translate(0,0);} 50%{transform:translate(-50px,50px);} }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: linear-gradient(180deg, rgba(6,13,26,0.98) 0%, rgba(2,8,16,0.99) 100%);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 20; position: relative;
+  backdrop-filter: blur(20px);
+}
+
+/* Sidebar scan line */
+.sidebar::after {
+  content: '';
+  position: absolute; right: 0; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(180deg, transparent 0%, var(--cyan) 30%, var(--purple) 70%, transparent 100%);
+  opacity: 0; animation: sidebarGlow 4s ease-in-out infinite;
+}
+@keyframes sidebarGlow {
+  0%,100%{opacity:0;} 50%{opacity:0.4;}
+}
+
+.logo-area {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.logo-area::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0.5;
+}
+
+.logo-wrap {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-3d-wrap {
+  width: 38px; height: 38px; position: relative; flex-shrink: 0;
+}
+#logo-canvas { display: block; border-radius: 10px; }
+
+.logo-text-wrap { flex: 1; }
+.logo-name {
+  font-size: 16px; font-weight: 700; letter-spacing: -0.3px;
+  background: linear-gradient(90deg, var(--cyan), #a78bfa, var(--cyan));
+  background-size: 200%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+@keyframes shimmer { to { background-position: 200% center; } }
+.logo-ver {
+  font-size: 9px; font-family: 'JetBrains Mono', monospace;
+  color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px;
+}
+
+.status-pill {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 12px;
+  padding: 5px 10px;
+  background: rgba(16,185,129,0.07);
+  border: 1px solid rgba(16,185,129,0.15);
+  border-radius: 20px;
+  width: fit-content;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px var(--green);} 50%{opacity:0.6;box-shadow:0 0 20px var(--green);} }
+.status-text { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--green); letter-spacing: 0.5px; }
+
+nav { padding: 14px 12px; flex: 1; overflow-y: auto; }
+nav::-webkit-scrollbar { display: none; }
+
+.nav-label {
+  font-size: 9px; font-family: 'JetBrains Mono', monospace;
+  color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+  padding: 10px 10px 6px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 9px; cursor: pointer;
+  color: var(--text2); font-size: 13px; font-weight: 500;
+  transition: all 0.25s; position: relative; margin-bottom: 1px;
+  border: 1px solid transparent;
+}
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
+.nav-item:hover { background: rgba(0,212,255,0.05); color: var(--text); border-color: rgba(0,212,255,0.08); }
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(0,212,255,0.1), rgba(124,58,237,0.05));
+  color: var(--cyan); border-color: rgba(0,212,255,0.15);
+}
+.nav-item.active svg { opacity: 1; }
+.nav-item.active::before {
+  content: ''; position: absolute; left: -1px; top: 25%; height: 50%; width: 2.5px;
+  background: var(--cyan); border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 10px var(--cyan);
+}
+.nav-glow {
+  position: absolute; inset: 0; border-radius: 9px;
+  background: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.08), transparent 70%);
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.nav-item.active .nav-glow { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto; background: var(--red); color: white;
+  font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  padding: 1px 6px; border-radius: 10px; animation: badgePulse 2s ease-in-out infinite;
+}
+@keyframes badgePulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4);} 50%{box-shadow:0 0 0 4px rgba(239,68,68,0);} }
+
+.sidebar-user {
+  margin: 12px; padding: 12px; border-radius: 10px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  transition: border-color 0.3s;
+}
+.sidebar-user:hover { border-color: var(--border2); }
+.user-ava {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--purple), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: white;
+  box-shadow: 0 0 12px rgba(124,58,237,0.3);
+}
+.user-n { font-size: 13px; font-weight: 600; color: var(--text); }
+.user-r { font-size: 10px; color: var(--text2); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+
+/* ─── MAIN ─── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; z-index: 10; position: relative; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(2,8,16,0.7); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; position: relative; overflow: hidden;
+}
+.topbar::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
+  opacity: 0.3;
+}
+
+.topbar-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.topbar-path { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.search {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 12px; width: 190px; transition: all 0.2s;
+}
+.search:focus-within {
+  border-color: rgba(0,212,255,0.3);
+  background: rgba(0,212,255,0.04);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.07);
+}
+.search input { background: none; border: none; outline: none; color: var(--text); font-size: 12px; font-family: 'JetBrains Mono', monospace; width: 100%; }
+.search input::placeholder { color: var(--muted); }
+.search-icon { color: var(--muted); font-size: 13px; flex-shrink: 0; }
+
+.icon-btn {
+  width: 36px; height: 36px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; transition: all 0.2s;
+}
+.icon-btn:hover { border-color: rgba(0,212,255,0.2); background: rgba(0,212,255,0.05); }
+.notif-badge {
+  position: absolute; top: 5px; right: 5px; width: 7px; height: 7px;
+  background: var(--red); border-radius: 50%; border: 1.5px solid var(--bg);
+  animation: pulse2 1.5s ease-in-out infinite;
+}
+@keyframes pulse2 { 0%,100%{transform:scale(1);} 50%{transform:scale(1.3);} }
+
+.scan-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  color: #020810; border: none; border-radius: 8px;
+  padding: 0 18px; height: 36px; font-size: 12px; font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif; cursor: pointer;
+  transition: all 0.25s; position: relative; overflow: hidden; letter-spacing: 0.2px;
+}
+.scan-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+  opacity: 0; transition: opacity 0.2s;
+}
+.scan-btn:hover { box-shadow: 0 0 24px rgba(0,212,255,0.5), 0 0 48px rgba(0,212,255,0.15); transform: translateY(-1px); }
+.scan-btn:hover::before { opacity: 1; }
+.scan-btn.scanning {
+  background: transparent; color: var(--cyan); border: 1px solid rgba(0,212,255,0.4);
+  box-shadow: 0 0 20px rgba(0,212,255,0.2) inset;
+}
+.scan-btn .spin { animation: spin 0.6s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.last-scan { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+.last-scan em { color: var(--green); font-style: normal; }
+
+/* ─── CONTENT ─── */
+.content { flex: 1; overflow-y: auto; padding: 22px 26px; }
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* ─── PAGE ─── */
+.page { display: none; }
+.page.active { display: block; animation: pgIn 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes pgIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+
+/* ─── METRIC CARDS ─── */
+.metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+
+.mc {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px;
+  position: relative; overflow: hidden; cursor: default;
+  transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
+  animation: mcIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+.mc:nth-child(1){animation-delay:.05s;} .mc:nth-child(2){animation-delay:.1s;}
+.mc:nth-child(3){animation-delay:.15s;} .mc:nth-child(4){animation-delay:.2s;}
+@keyframes mcIn { from{opacity:0;transform:translateY(24px) scale(0.97);} to{opacity:1;transform:translateY(0) scale(1);} }
+
+.mc::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 3px 0 0 3px;
+}
+.mc:nth-child(1)::before{background:var(--cyan);box-shadow:0 0 16px var(--cyan);}
+.mc:nth-child(2)::before{background:var(--red);box-shadow:0 0 16px var(--red);}
+.mc:nth-child(3)::before{background:var(--purple2);box-shadow:0 0 16px var(--purple);}
+.mc:nth-child(4)::before{background:var(--green);box-shadow:0 0 16px var(--green);}
+
+/* Shimmer overlay */
+.mc::after {
+  content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.02), transparent);
+  transition: left 0.6s;
+}
+.mc:hover::after { left: 150%; }
+.mc:hover { border-color: var(--border2); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+
+.mc-glow {
+  position: absolute; width: 160px; height: 160px; border-radius: 50%; top: -40px; right: -40px;
+  opacity: 0.05; pointer-events: none;
+}
+.mc:nth-child(1) .mc-glow{background:var(--cyan);}
+.mc:nth-child(2) .mc-glow{background:var(--red);}
+.mc:nth-child(3) .mc-glow{background:var(--purple2);}
+.mc:nth-child(4) .mc-glow{background:var(--green);}
+
+.mc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.mc-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; }
+.mc-icon { font-size: 18px; opacity: 0.5; }
+.mc-val { font-size: 30px; font-weight: 700; letter-spacing: -1.5px; color: var(--text); margin-bottom: 4px; }
+.mc-sub { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+.mc-sub.up { color: var(--green); } .mc-sub.warn { color: var(--yellow); }
+
+/* ─── MIDDLE ROW ─── */
+.mid { display: grid; grid-template-columns: 1fr 360px; gap: 14px; margin-bottom: 20px; }
+
+/* ─── CARD ─── */
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  transition: border-color 0.3s; animation: mcIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+.card:hover { border-color: var(--border2); }
+
+.ch { /* card header */
+  padding: 14px 18px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ct { /* card title */
+  font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px;
+}
+.ct-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ct-dot.live { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: pulse 2s ease-in-out infinite; }
+.ct-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse 2s ease-in-out infinite; }
+.ca { font-size: 11px; color: var(--cyan); font-family: 'JetBrains Mono', monospace; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+.ca:hover { opacity: 1; }
+
+/* ─── HEALTH CHART ─── */
+.health-body { padding: 20px 24px; display: flex; align-items: center; gap: 28px; }
+
+.donut-wrap { position: relative; flex-shrink: 0; }
+#hc { display: block; filter: drop-shadow(0 0 20px rgba(0,212,255,0.15)); }
+.donut-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center; pointer-events: none;
+}
+.donut-pct {
+  font-size: 32px; font-weight: 700; letter-spacing: -2px;
+  background: linear-gradient(135deg, var(--cyan), #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px rgba(0,212,255,0.4));
+}
+.donut-lbl { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--text2); letter-spacing: 2px; margin-top: 2px; }
+
+.bkd { flex: 1; }
+.bkd-title { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
+.bkd-item { margin-bottom: 11px; }
+.bkd-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.bkd-lbl { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+.bkd-cnt { font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.bar-t { height: 5px; background: rgba(255,255,255,0.04); border-radius: 5px; overflow: hidden; position: relative; }
+.bar-f {
+  height: 100%; border-radius: 5px; width: 0;
+  transition: width 1.8s cubic-bezier(0.16,1,0.3,1);
+  position: relative;
+}
+.bar-f::after {
+  content: ''; position: absolute; right: 0; top: -2px; width: 9px; height: 9px;
+  border-radius: 50%; background: inherit; box-shadow: 0 0 8px currentColor;
+}
+
+/* ─── FEED ─── */
+.feed { padding: 0; max-height: 288px; overflow-y: auto; }
+.feed::-webkit-scrollbar { width: 3px; }
+.feed::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.fi { /* feed item */
+  display: flex; gap: 10px; padding: 12px 16px;
+  border-bottom: 1px solid rgba(15,30,58,0.6);
+  align-items: flex-start; transition: background 0.2s; cursor: pointer;
+  animation: feedIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.fi:hover { background: rgba(255,255,255,0.02); }
+.fi:last-child { border-bottom: none; }
+@keyframes feedIn { from{opacity:0;transform:translateX(12px);} to{opacity:1;transform:translateX(0);} }
+
+.rb { /* risk badge */
+  font-size: 9px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  padding: 3px 7px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; margin-top: 1px;
+}
+.rb.C { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); animation: critGlow 2s ease-in-out infinite; }
+.rb.H { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+.rb.M { background: rgba(167,139,250,0.12); color: var(--purple2); border: 1px solid rgba(167,139,250,0.25); }
+.rb.L { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+@keyframes critGlow { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 10px rgba(239,68,68,0.35);} }
+
+.fi-body { flex: 1; min-width: 0; }
+.fi-desc { font-size: 12px; color: var(--text); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fi-meta { font-size: 10px; color: var(--text2); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+.rv-btn {
+  background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.18);
+  color: var(--cyan); border-radius: 5px; padding: 4px 9px;
+  font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.rv-btn:hover { background: rgba(0,212,255,0.14); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+
+/* ─── TABLE ─── */
+.tw { overflow-x: auto; }
+.vt { width: 100%; border-collapse: collapse; font-size: 12px; }
+.vt thead tr { border-bottom: 1px solid var(--border); }
+.vt th {
+  padding: 11px 14px; text-align: left; font-size: 10px;
+  font-family: 'JetBrains Mono', monospace; color: var(--text2); font-weight: 500;
+  letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap;
+}
+.vt td { padding: 12px 14px; border-bottom: 1px solid rgba(15,30,58,0.5); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); white-space: nowrap; }
+.vt tbody tr { transition: background 0.15s; }
+.vt tbody tr:hover { background: rgba(255,255,255,0.02); }
+.vt tr.crit { background: rgba(239,68,68,0.03); }
+.vt tr.crit:hover { background: rgba(239,68,68,0.06); }
+.rid { color: var(--cyan); font-weight: 600; }
+.en { color: var(--text); font-weight: 500; font-family: 'Space Grotesk', sans-serif; font-size: 12px; }
+.pr { color: var(--purple2); }
+
+.abtns { display: flex; gap: 6px; }
+.eb {
+  background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.18);
+  color: var(--cyan); border-radius: 5px; padding: 4px 9px;
+  font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s;
+}
+.eb:hover { background: rgba(0,212,255,0.14); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+.ob {
+  background: rgba(100,116,139,0.07); border: 1px solid rgba(100,116,139,0.18);
+  color: var(--text2); border-radius: 5px; padding: 4px 9px;
+  font-size: 10px; font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.2s;
+}
+.ob:hover { background: rgba(100,116,139,0.14); color: var(--text); }
+
+/* ─── ACTIVITY ─── */
+.act-item {
+  display: flex; gap: 14px; padding: 11px 18px;
+  border-bottom: 1px solid rgba(15,30,58,0.4); align-items: flex-start;
+  animation: mcIn 0.4s ease both;
+}
+.act-item:last-child { border-bottom: none; }
+.act-time { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted); width: 65px; flex-shrink: 0; padding-top: 2px; }
+.act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.act-txt { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.act-txt strong { color: var(--text); font-weight: 600; }
+
+/* ─── BOTTOM ROW ─── */
+.brow { display: grid; grid-template-columns: 1fr 300px; gap: 14px; margin-bottom: 20px; }
+
+/* ─── MINI STAT ─── */
+.mini-s {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+  transition: border-color 0.2s;
+}
+.mini-s:hover { border-color: var(--border2); }
+.mini-lbl { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+.mini-val { font-size: 22px; font-weight: 700; letter-spacing: -1px; }
+
+/* ─── MODAL ─── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(2,8,16,0.88);
+  backdrop-filter: blur(12px); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--card2); border: 1px solid var(--border2);
+  border-radius: 18px; width: 560px; max-width: 94vw;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,212,255,0.05), 0 0 80px rgba(0,212,255,0.04);
+  transform: translateY(24px) scale(0.96);
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+  overflow: hidden; position: relative;
+}
+.modal::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), var(--purple2), transparent);
+  opacity: 0.4;
+}
+.overlay.open .modal { transform: translateY(0) scale(1); }
+
+.mh { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.mt { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.mt span { font-size: 16px; }
+.mcl {
+  width: 28px; height: 28px; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--text2); transition: all 0.2s;
+}
+.mcl:hover { background: rgba(239,68,68,0.1); color: var(--red); border-color: rgba(239,68,68,0.25); }
+
+.mb { padding: 18px 22px 22px; }
+
+.minfo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.mchip { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; }
+.mchip.wide { grid-column: span 2; }
+.mchip-l { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.mchip-v { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 600; }
+
+.ai-box {
+  background: rgba(0,212,255,0.03); border: 1px solid rgba(0,212,255,0.1);
+  border-radius: 11px; padding: 15px; margin-bottom: 16px; position: relative; overflow: hidden;
+}
+.ai-box::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(0,212,255,0.02), transparent);
+  pointer-events: none;
+}
+.ai-lbl {
+  font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--cyan);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 7px;
+}
+.ai-lbl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: pulse 1.5s ease-in-out infinite; }
+.ai-txt { font-size: 12px; color: var(--text); line-height: 1.75; font-family: 'JetBrains Mono', monospace; }
+.tw-cursor { display: inline-block; width: 2px; height: 13px; background: var(--cyan); margin-left: 2px; vertical-align: middle; animation: blink 0.8s step-end infinite; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+.macts { display: flex; gap: 8px; }
+.mact {
+  flex: 1; border-radius: 9px; padding: 10px; font-size: 12px; font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif; cursor: pointer; transition: all 0.2s; border: 1px solid;
+}
+.mact.app { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); color: var(--green); }
+.mact.app:hover { background: rgba(16,185,129,0.16); box-shadow: 0 0 20px rgba(16,185,129,0.15); }
+.mact.dis { background: rgba(100,116,139,0.07); border-color: rgba(100,116,139,0.2); color: var(--text2); }
+.mact.dis:hover { background: rgba(100,116,139,0.14); color: var(--text); }
+.mact.esc { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.2); color: var(--red); }
+.mact.esc:hover { background: rgba(239,68,68,0.14); box-shadow: 0 0 20px rgba(239,68,68,0.15); }
+
+/* ─── UPLOAD PAGE ─── */
+.upzone {
+  border: 2px dashed var(--border2); border-radius: 14px; padding: 48px 24px;
+  text-align: center; margin-bottom: 20px; transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden;
+}
+.upzone-bg {
+  position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(0,212,255,0.04), transparent 70%);
+  transition: opacity 0.3s;
+}
+.upzone:hover .upzone-bg, .upzone.drag .upzone-bg { opacity: 1; }
+.upzone:hover, .upzone.drag { border-color: rgba(0,212,255,0.35); box-shadow: 0 0 40px rgba(0,212,255,0.04); }
+.upzone-icon { font-size: 44px; margin-bottom: 14px; }
+.upzone-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.upzone-sub { font-size: 12px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+
+.sec-title { font-size: 12px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.flist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.fitem {
+  background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 13px 15px;
+  display: flex; align-items: flex-start; gap: 12px; transition: border-color 0.2s;
+}
+.fitem:hover { border-color: var(--border2); }
+.ficon { font-size: 22px; flex-shrink: 0; }
+.fname { font-size: 13px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+.fmeta { font-size: 10px; color: var(--text2); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.fstatus { margin-left: auto; flex-shrink: 0; }
+.frules { font-size: 11px; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+
+.rtoggle {
+  font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--cyan);
+  cursor: pointer; margin-top: 8px; opacity: 0.65; transition: opacity 0.2s; display: flex; align-items: center; gap: 5px;
+}
+.rtoggle:hover { opacity: 1; }
+.rlist { display: none; flex-direction: column; gap: 7px; margin-top: 9px; }
+.rlist.open { display: flex; }
+.ritem {
+  background: rgba(0,212,255,0.03); border: 1px solid rgba(0,212,255,0.09); border-radius: 8px; padding: 10px 13px;
+}
+.rid2 { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--cyan); margin-bottom: 3px; }
+.rtxt { font-size: 12px; color: var(--text); line-height: 1.5; }
+
+/* ─── DB PAGE ─── */
+.db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.fg { margin-bottom: 13px; }
+.fl { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; display: block; }
+.fi-inp {
+  width: 100%; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 11px; color: var(--text); font-size: 12px; font-family: 'JetBrains Mono', monospace; outline: none; transition: all 0.2s;
+}
+.fi-inp:focus { border-color: rgba(0,212,255,0.35); box-shadow: 0 0 0 3px rgba(0,212,255,0.06); background: rgba(0,212,255,0.02); }
+select.fi-inp { cursor: pointer; appearance: none; }
+.tbtn {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25);
+  color: var(--cyan); border-radius: 8px; padding: 9px 18px;
+  font-size: 12px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; cursor: pointer; transition: all 0.2s;
+}
+.tbtn:hover { background: rgba(0,212,255,0.14); box-shadow: 0 0 20px rgba(0,212,255,0.15); }
+.tbtn.ok { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.25); color: var(--green); }
+
+.tbl-list { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+.tbl-item {
+  display: flex; align-items: center; gap: 11px; padding: 11px 13px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; transition: border-color 0.2s;
+}
+.tbl-item:hover { border-color: var(--border2); }
+.tbl-ind { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); flex-shrink: 0; }
+.tbl-n { color: var(--cyan); flex: 1; }
+.tbl-r { color: var(--text2); font-size: 11px; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--card2); border: 1px solid var(--border2); border-radius: 12px;
+  padding: 13px 18px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 500; z-index: 3000;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  transform: translateY(80px) scale(0.95); opacity: 0;
+  transition: all 0.45s cubic-bezier(0.16,1,0.3,1);
+  min-width: 280px;
+}
+.toast.show { transform: translateY(0) scale(1); opacity: 1; }
+
+/* ─── SCAN SWEEP ─── */
+.sweep {
+  position: fixed; left: var(--sidebar-w); right: 0; top: 60px;
+  height: 2px; z-index: 999; pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, var(--cyan) 50%, transparent 100%);
+  box-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,212,255,0.3);
+  opacity: 0;
+}
+.sweep.go { animation: sweepAnim 1.8s ease-in-out forwards; }
+@keyframes sweepAnim {
+  0%{transform:translateY(0);opacity:0;}
+  5%{opacity:1;}
+  95%{opacity:0.8;}
+  100%{transform:translateY(calc(100vh - 60px));opacity:0;}
+}
+
+/* ─── REPORTS CHART ─── */
+#trendChart { display: block; }
+
+/* ─── SCROLLBAR GLOBAL ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<canvas id="three-bg"></canvas>
+<div class="aurora"><div class="aurora-1"></div><div class="aurora-2"></div><div class="aurora-3"></div></div>
+<div class="sweep" id="sweep"></div>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-wrap">
+      <div class="logo-3d-wrap"><canvas id="logo-canvas" width="38" height="38"></canvas></div>
+      <div class="logo-text-wrap">
+        <div class="logo-name">PolicyGuard</div>
+        <div class="logo-ver">AI Compliance v2.1</div>
+      </div>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <div class="status-text">System Active</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-label">Core</div>
+    <div class="nav-item active" onclick="goPage('dashboard',this)">
+      <div class="nav-glow"></div>
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="1.5"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="goPage('violations',this)">
+      <div class="nav-glow"></div>
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      Violations
+      <span class="nav-badge">17</span>
+    </div>
+    <div class="nav-label">Config</div>
+    <div class="nav-item" onclick="goPage('policies',this)">
+      <div class="nav-glow"></div>
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Policy Upload
+    </div>
+    <div class="nav-item" onclick="goPage('database',this)">
+      <div class="nav-glow"></div>
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><ellipse cx="12" cy="5" rx="9" ry="3" stroke-width="1.5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+      Database Connect
+    </div>
+    <div class="nav-item" onclick="goPage('reports',this)">
+      <div class="nav-glow"></div>
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Reports
+    </div>
+    <div class="nav-label">System</div>
+    <div class="nav-item">
+      <div class="nav-glow"></div>
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Settings
+    </div>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-ava">PB</div>
+    <div><div class="user-n">Parth Bhatt</div><div class="user-r">compliance officer</div></div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div>
+      <div class="topbar-title" id="pgTitle">Compliance Dashboard</div>
+      <div class="topbar-path" id="pgPath">PolicyGuard / Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="search">
+        <span class="search-icon">⌕</span>
+        <input type="text" placeholder="Search records, rules...">
+      </div>
+      <div class="icon-btn">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <span class="notif-badge"></span>
+      </div>
+      <div class="last-scan">Last scan: <em id="lsTime">2 mins ago</em></div>
+      <button class="scan-btn" id="scanBtn" onclick="runScan()">
+        <span id="scanIco">▶</span>
+        <span id="scanTxt">Run Scan Now</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ──── DASHBOARD ──── -->
+    <div class="page active" id="page-dashboard">
+      <!-- METRICS -->
+      <div class="metrics">
+        <div class="mc"><div class="mc-glow"></div>
+          <div class="mc-top"><div class="mc-label">Compliance Health</div><div class="mc-icon">🛡️</div></div>
+          <div class="mc-val" data-target="94" data-suffix="%">0%</div>
+          <div class="mc-sub up">↑ 2% from last scan</div>
+        </div>
+        <div class="mc"><div class="mc-glow"></div>
+          <div class="mc-top"><div class="mc-label">Active Violations</div><div class="mc-icon">⚠️</div></div>
+          <div class="mc-val" data-target="17">0</div>
+          <div class="mc-sub warn">5 Critical · 8 High · 4 Med</div>
+        </div>
+        <div class="mc"><div class="mc-glow"></div>
+          <div class="mc-top"><div class="mc-label">Policies Loaded</div><div class="mc-icon">📄</div></div>
+          <div class="mc-val" data-target="3">0</div>
+          <div class="mc-sub">142 rules extracted</div>
+        </div>
+        <div class="mc"><div class="mc-glow"></div>
+          <div class="mc-top"><div class="mc-label">Records Scanned</div><div class="mc-icon">🗄️</div></div>
+          <div class="mc-val" data-target="12480">0</div>
+          <div class="mc-sub up">Across 6 tables</div>
+        </div>
+      </div>
+
+      <!-- MIDDLE -->
+      <div class="mid">
+        <!-- HEALTH CARD -->
+        <div class="card">
+          <div class="ch"><div class="ct"><span class="ct-dot live"></span>Compliance Health Score</div><div class="ca">View History →</div></div>
+          <div class="health-body">
+            <div class="donut-wrap">
+              <canvas id="hc" width="188" height="188"></canvas>
+              <div class="donut-center"><div class="donut-pct">94%</div><div class="donut-lbl">HEALTH</div></div>
+            </div>
+            <div class="bkd">
+              <div class="bkd-title">Violation Breakdown</div>
+              <div class="bkd-item">
+                <div class="bkd-row"><div class="bkd-lbl">CRITICAL</div><div class="bkd-cnt" style="color:var(--red)">5</div></div>
+                <div class="bar-t"><div class="bar-f" style="background:linear-gradient(90deg,#dc2626,#ef4444)" data-w="29%"></div></div>
+              </div>
+              <div class="bkd-item">
+                <div class="bkd-row"><div class="bkd-lbl">HIGH</div><div class="bkd-cnt" style="color:var(--yellow)">8</div></div>
+                <div class="bar-t"><div class="bar-f" style="background:linear-gradient(90deg,#d97706,#f59e0b)" data-w="47%"></div></div>
+              </div>
+              <div class="bkd-item">
+                <div class="bkd-row"><div class="bkd-lbl">MEDIUM</div><div class="bkd-cnt" style="color:var(--purple2)">4</div></div>
+                <div class="bar-t"><div class="bar-f" style="background:linear-gradient(90deg,var(--purple),var(--purple2))" data-w="24%"></div></div>
+              </div>
+              <div class="bkd-item">
+                <div class="bkd-row"><div class="bkd-lbl">LOW</div><div class="bkd-cnt" style="color:var(--green)">0</div></div>
+                <div class="bar-t"><div class="bar-f" style="background:var(--green)" data-w="0%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FEED CARD -->
+        <div class="card">
+          <div class="ch"><div class="ct"><span class="ct-dot red"></span>Live Violations Feed</div><div class="ca">See All →</div></div>
+          <div class="feed">
+            <div class="fi" style="animation-delay:.05s">
+              <span class="rb C">CRITICAL</span>
+              <div class="fi-body">
+                <div class="fi-desc">User 'J.Smith' access violation — Sales_Data.db</div>
+                <div class="fi-meta">10:35:32 · C9876 · GDPR-7b</div>
+              </div>
+              <button class="rv-btn" onclick="openM('C9876','Robert Johnson','2018-01-15','Active','GDPR-12a','CRITICAL','Record C9876 (Robert Johnson) violates GDPR-12a from GDPR_Policy_v2.pdf. The rule mandates anonymization of all PII within 5 years of last transaction. This record\'s last transaction was 2018-01-15 — 6.1 years ago — and remains Active with unmasked fields: name, email, phone. Action required: anonymize or delete immediately.')">Review</button>
+            </div>
+            <div class="fi" style="animation-delay:.1s">
+              <span class="rb C">CRITICAL</span>
+              <div class="fi-body">
+                <div class="fi-desc">Unauthorized data export — Europe_Server.log</div>
+                <div class="fi-meta">10:35:32 · LOG-441 · GDPR-7b</div>
+              </div>
+              <button class="rv-btn" onclick="openM('LOG-441','System Export','2024-01-15','Active','GDPR-7b','CRITICAL','Log entry LOG-441 confirms unauthorized export of PII to us-west-2 (outside EU/EEA). GDPR-7b strictly prohibits cross-border PII transfers without documented consent and lawful transfer mechanism. Halt export pipeline, notify DPO, and file SCCs within 72 hours.')">Review</button>
+            </div>
+            <div class="fi" style="animation-delay:.15s">
+              <span class="rb H">HIGH</span>
+              <div class="fi-body">
+                <div class="fi-desc">PII in unprotected table — Cust_Records.csv</div>
+                <div class="fi-meta">10:35:29 · C9872 · AC-3c</div>
+              </div>
+              <button class="rv-btn" onclick="openM('C9872','Grytt Donner','2018-01-11','Flagged','AC-3c','HIGH','C9872 contains PII (email, SSN, phone) stored in Cust_Records.csv without AES-256 encryption. Access Control Rule 3c mandates encryption at rest. The file is readable by all DB users with no access restriction. Encrypt immediately and restrict access to authorized roles only.')">Review</button>
+            </div>
+            <div class="fi" style="animation-delay:.2s">
+              <span class="rb H">HIGH</span>
+              <div class="fi-body">
+                <div class="fi-desc">Stale active record past retention — C9871</div>
+                <div class="fi-meta">10:35:22 · C9871 · GDPR-12a</div>
+              </div>
+              <button class="rv-btn" onclick="openM('C9871','Bohn Smith','2018-01-15','Active','GDPR-12a','HIGH','Record C9871 last transacted 2018-01-15 — 6.1 years ago. GDPR-12a requires anonymization after 5 years. Record is still Active with full PII. Schedule anonymization run immediately.')">Review</button>
+            </div>
+            <div class="fi" style="animation-delay:.25s">
+              <span class="rb M">MEDIUM</span>
+              <div class="fi-body">
+                <div class="fi-desc">4h audit log gap detected — audit_trail</div>
+                <div class="fi-meta">10:34:57 · AUD-019 · AC-8a</div>
+              </div>
+              <button class="rv-btn" onclick="openM('AUD-019','Audit System','2024-01-20','Incomplete','AC-8a','MEDIUM','4-hour gap in audit_trail between 02:00-06:00 UTC on 2024-01-20. AC-8a requires uninterrupted logging — gaps over 15 minutes trigger mandatory investigation. May indicate log tampering or system outage. Investigate and restore log continuity.')">Review</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="card" style="margin-bottom:18px;animation-delay:.25s">
+        <div class="ch"><div class="ct">Policy-to-Data Violation Details</div>
+          <div style="display:flex;gap:10px"><div class="ca">Export CSV →</div><div class="ca">Filter ↓</div></div>
+        </div>
+        <div class="tw">
+          <table class="vt">
+            <thead><tr><th>Record ID</th><th>Entity</th><th>Last Transaction</th><th>Data Status</th><th>Violated Policy</th><th>Risk</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr class="crit"><td><span class="rid">C9876</span></td><td><span class="en">Robert Johnson</span></td><td>2018-01-15</td><td style="color:var(--red)">● Active</td><td><span class="pr">GDPR-12a</span></td><td><span class="rb C">CRITICAL</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9876','Robert Johnson','2018-01-15','Active','GDPR-12a','CRITICAL','Record C9876 (Robert Johnson) violates GDPR-12a. Last transaction 2018-01-15 is 6.1 years ago. Rule requires anonymization after 5 years. Record still Active with unmasked PII (name, email, phone). Anonymize or delete immediately.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr class="crit"><td><span class="rid">LOG-441</span></td><td><span class="en">System Export</span></td><td>2024-01-15</td><td style="color:var(--red)">● Active</td><td><span class="pr">GDPR-7b</span></td><td><span class="rb C">CRITICAL</span></td><td><div class="abtns"><button class="eb" onclick="openM('LOG-441','System Export','2024-01-15','Active','GDPR-7b','CRITICAL','Unauthorized export of PII to non-EU region (us-west-2). GDPR-7b prohibits cross-border PII transfer without consent and lawful mechanism. Halt pipeline, notify DPO, file SCCs within 72 hours.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr class="crit"><td><span class="rid">C9871</span></td><td><span class="en">Bohn Smith</span></td><td>2018-01-15</td><td style="color:var(--red)">● Active</td><td><span class="pr">GDPR-12a</span></td><td><span class="rb C">CRITICAL</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9871','Bohn Smith','2018-01-15','Active','GDPR-12a','CRITICAL','GDPR-12a violation: last transaction 6.1 years ago, PII still unmasked, status Active. Anonymization should have occurred Jan 2023. Immediate remediation required.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">C9872</span></td><td><span class="en">Grytt Donner</span></td><td>2018-01-11</td><td style="color:var(--yellow)">● Flagged</td><td><span class="pr">AC-3c</span></td><td><span class="rb H">HIGH</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9872','Grytt Donner','2018-01-11','Flagged','AC-3c','HIGH','PII stored without AES-256 encryption (AC-3c). Cust_Records.csv is unencrypted and world-readable. Encrypt the table and enforce role-based access immediately.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">C9873</span></td><td><span class="en">Enian Rrows</span></td><td>2021-01-03</td><td style="color:var(--yellow)">● Flagged</td><td><span class="pr">DR-5b</span></td><td><span class="rb H">HIGH</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9873','Enian Rrows','2021-01-03','Flagged','DR-5b','HIGH','Record approaching 5-year limit (Jan 2026). DR-5b requires proactive anonymization scheduling 90 days prior. No action scheduled. Schedule anonymization for Oct 2025.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">C9874</span></td><td><span class="en">Jonin Johnson</span></td><td>2018-01-09</td><td style="color:var(--green)">● Reviewed</td><td><span class="pr">GDPR-12a</span></td><td><span class="rb M">MEDIUM</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9874','Jonin Johnson','2018-01-09','Reviewed','GDPR-12a','MEDIUM','Override applied by Parth Bhatt at 10:20 AM. Reason: Legal hold in progress. Monitoring continues. Re-review required upon hold release.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">AUD-019</span></td><td><span class="en">Audit System</span></td><td>2024-01-20</td><td style="color:var(--yellow)">● Incomplete</td><td><span class="pr">AC-8a</span></td><td><span class="rb M">MEDIUM</span></td><td><div class="abtns"><button class="eb" onclick="openM('AUD-019','Audit System','2024-01-20','Incomplete','AC-8a','MEDIUM','4-hour log gap (02:00-06:00 UTC). AC-8a requires continuous logging — gaps over 15 min trigger investigation. Possible tampering or system failure. Investigate and restore.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">C9880</span></td><td><span class="en">Joreph Johnson</span></td><td>2018-01-26</td><td style="color:var(--text2)">● Unmonitored</td><td><span class="pr">DR-2a</span></td><td><span class="rb M">MEDIUM</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9880','Joreph Johnson','2018-01-26','Unmonitored','DR-2a','MEDIUM','Status Unmonitored is undefined in Data Retention Policy. DR-2a requires one of: Active, Archived, or Anonymized. Unmonitored records bypass compliance scans entirely. Reclassify immediately.')">Explain</button><button class="ob">Override</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW -->
+      <div class="brow">
+        <div class="card">
+          <div class="ch"><div class="ct">Activity Timeline</div><div class="ca">Full Log →</div></div>
+          <div id="actLog">
+            <div class="act-item"><div class="act-time">10:35 AM</div><div class="act-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div><div class="act-txt">Scan complete: <strong>12,480 records</strong> checked across 6 tables</div></div>
+            <div class="act-item"><div class="act-time">10:35 AM</div><div class="act-dot" style="background:var(--red);box-shadow:0 0 6px var(--red)"></div><div class="act-txt"><strong>5 critical violations</strong> flagged in Europe_Server.log</div></div>
+            <div class="act-item"><div class="act-time">10:34 AM</div><div class="act-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan)"></div><div class="act-txt">Policy rules reloaded from <strong>GDPR_Policy_v2.pdf</strong></div></div>
+            <div class="act-item"><div class="act-time">10:20 AM</div><div class="act-dot" style="background:var(--purple2);box-shadow:0 0 6px var(--purple)"></div><div class="act-txt">Manual override by <strong>Parth Bhatt</strong> on Record C9874</div></div>
+            <div class="act-item"><div class="act-time">09:00 AM</div><div class="act-dot" style="background:var(--muted)"></div><div class="act-txt">Scheduled scan initiated via <strong>APScheduler cron</strong></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Scan Summary</div></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:9px">
+            <div class="mini-s"><div class="mini-lbl">Scan Duration</div><div class="mini-val" style="color:var(--cyan)">1.8s</div></div>
+            <div class="mini-s"><div class="mini-lbl">Rules Applied</div><div class="mini-val" style="color:var(--text)">142</div></div>
+            <div class="mini-s"><div class="mini-lbl">Next Scan</div><div class="mini-val" style="color:var(--yellow);font-size:16px">04:35 PM</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──── VIOLATIONS PAGE ──── -->
+    <div class="page" id="page-violations">
+      <div class="card">
+        <div class="ch"><div class="ct"><span class="ct-dot red"></span>All Active Violations — 17</div><div class="ca">Export Report →</div></div>
+        <div class="tw">
+          <table class="vt">
+            <thead><tr><th>Record ID</th><th>Entity</th><th>Last Transaction</th><th>Status</th><th>Policy</th><th>Risk</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr class="crit"><td><span class="rid">C9876</span></td><td><span class="en">Robert Johnson</span></td><td>2018-01-15</td><td style="color:var(--red)">● Active</td><td><span class="pr">GDPR-12a</span></td><td><span class="rb C">CRITICAL</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9876','Robert Johnson','2018-01-15','Active','GDPR-12a','CRITICAL','6.1 year old PII still Active. GDPR-12a mandates anonymization after 5 years. Anonymize or delete immediately.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr class="crit"><td><span class="rid">LOG-441</span></td><td><span class="en">System Export</span></td><td>2024-01-15</td><td style="color:var(--red)">● Active</td><td><span class="pr">GDPR-7b</span></td><td><span class="rb C">CRITICAL</span></td><td><div class="abtns"><button class="eb" onclick="openM('LOG-441','System Export','2024-01-15','Active','GDPR-7b','CRITICAL','Unauthorized EU PII export to us-west-2. GDPR-7b violated. Halt and notify DPO.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr class="crit"><td><span class="rid">C9871</span></td><td><span class="en">Bohn Smith</span></td><td>2018-01-15</td><td style="color:var(--red)">● Active</td><td><span class="pr">GDPR-12a</span></td><td><span class="rb C">CRITICAL</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9871','Bohn Smith','2018-01-15','Active','GDPR-12a','CRITICAL','5+ year retention breach. Unmasked PII in Active record. Immediate remediation required.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">C9872</span></td><td><span class="en">Grytt Donner</span></td><td>2018-01-11</td><td style="color:var(--yellow)">● Flagged</td><td><span class="pr">AC-3c</span></td><td><span class="rb H">HIGH</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9872','Grytt Donner','2018-01-11','Flagged','AC-3c','HIGH','PII in unencrypted storage. Encrypt and restrict access immediately.')">Explain</button><button class="ob">Override</button></div></td></tr>
+              <tr><td><span class="rid">C9873</span></td><td><span class="en">Enian Rrows</span></td><td>2021-01-03</td><td style="color:var(--yellow)">● Flagged</td><td><span class="pr">DR-5b</span></td><td><span class="rb H">HIGH</span></td><td><div class="abtns"><button class="eb" onclick="openM('C9873','Enian Rrows','2021-01-03','Flagged','DR-5b','HIGH','Approaching 5-year limit Jan 2026. No anonymization scheduled. DR-5b requires 90-day advance action.')">Explain</button><button class="ob">Override</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──── POLICIES PAGE ──── -->
+    <div class="page" id="page-policies">
+      <div class="upzone" onclick="document.getElementById('fu').click()">
+        <div class="upzone-bg"></div>
+        <div class="upzone-icon">📄</div>
+        <div class="upzone-title">Drop PDF policy document here</div>
+        <div class="upzone-sub">Supports PDF · Up to 50MB · AI extracts rules automatically</div>
+      </div>
+      <input type="file" id="fu" accept=".pdf" style="display:none" onchange="handleUp(this)">
+      <div class="sec-title">Loaded Policies</div>
+      <div class="flist">
+        <div class="fitem"><div class="ficon">📘</div><div style="flex:1">
+          <div class="fname">GDPR_Policy_v2.pdf</div><div class="fmeta">2.4 MB · Uploaded 09:00 AM</div>
+          <div class="rtoggle" onclick="togR(this)">▶ View Extracted Rules (47)</div>
+          <div class="rlist">
+            <div class="ritem"><div class="rid2">GDPR-12a · Data Retention · CRITICAL</div><div class="rtxt">All customer PII must be deleted or anonymized after 5 years from the date of last transaction.</div></div>
+            <div class="ritem"><div class="rid2">GDPR-7b · Data Transfer · CRITICAL</div><div class="rtxt">Unauthorized data export outside EU/EEA is strictly prohibited without explicit consent and SCCs.</div></div>
+            <div class="ritem"><div class="rid2">GDPR-5a · Data Minimization · HIGH</div><div class="rtxt">Only data strictly necessary for the stated purpose may be retained. Excess data purged quarterly.</div></div>
+          </div>
+        </div><div class="fstatus"><span class="frules">✓ 47 rules</span></div></div>
+        <div class="fitem"><div class="ficon">📗</div><div style="flex:1">
+          <div class="fname">Data_Retention_Policy.pdf</div><div class="fmeta">1.8 MB · Uploaded 09:00 AM</div>
+          <div class="rtoggle" onclick="togR(this)">▶ View Extracted Rules (61)</div>
+          <div class="rlist">
+            <div class="ritem"><div class="rid2">DR-5b · Proactive Retention · HIGH</div><div class="rtxt">Records approaching limit must be flagged 90 days in advance and scheduled for anonymization.</div></div>
+            <div class="ritem"><div class="rid2">DR-2a · Record Status · MEDIUM</div><div class="rtxt">All records must carry one of: Active, Archived, or Anonymized. Custom statuses are non-compliant.</div></div>
+          </div>
+        </div><div class="fstatus"><span class="frules">✓ 61 rules</span></div></div>
+        <div class="fitem"><div class="ficon">📙</div><div style="flex:1">
+          <div class="fname">Access_Control_Policy.pdf</div><div class="fmeta">1.1 MB · Uploaded 09:00 AM</div>
+          <div class="rtoggle" onclick="togR(this)">▶ View Extracted Rules (34)</div>
+          <div class="rlist">
+            <div class="ritem"><div class="rid2">AC-3c · Encryption at Rest · HIGH</div><div class="rtxt">All PII must be encrypted using AES-256. Unencrypted PII in any table or file is a violation.</div></div>
+            <div class="ritem"><div class="rid2">AC-8a · Audit Logging · MEDIUM</div><div class="rtxt">Continuous, uninterrupted audit logs required. Gaps over 15 minutes trigger automatic investigation.</div></div>
+          </div>
+        </div><div class="fstatus"><span class="frules">✓ 34 rules</span></div></div>
+      </div>
+    </div>
+
+    <!-- ──── DATABASE PAGE ──── -->
+    <div class="page" id="page-database">
+      <div class="db-grid">
+        <div class="card">
+          <div class="ch"><div class="ct">Database Connection</div></div>
+          <div style="padding:18px">
+            <div class="fg"><label class="fl">Database Type</label><select class="fi-inp"><option>PostgreSQL</option><option>MySQL</option><option>MongoDB</option></select></div>
+            <div style="display:grid;grid-template-columns:1fr 80px;gap:10px">
+              <div class="fg"><label class="fl">Host</label><input class="fi-inp" value="db.company-internal.com"></div>
+              <div class="fg"><label class="fl">Port</label><input class="fi-inp" value="5432"></div>
+            </div>
+            <div class="fg"><label class="fl">Database Name</label><input class="fi-inp" value="compliance_db"></div>
+            <div class="fg"><label class="fl">Username</label><input class="fi-inp" value="pg_admin"></div>
+            <div class="fg"><label class="fl">Password</label><input class="fi-inp" type="password" value="••••••••••"></div>
+            <button class="tbtn" id="tbtn" onclick="testConn()"><span id="tbtnI">⟳</span> Test Connection</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><span class="ct-dot live"></span>Connected Tables</div></div>
+          <div style="padding:14px">
+            <div class="tbl-list">
+              <div class="tbl-item"><div class="tbl-ind"></div><div class="tbl-n">customers</div><div class="tbl-r">12,480 rows</div></div>
+              <div class="tbl-item"><div class="tbl-ind"></div><div class="tbl-n">transactions</div><div class="tbl-r">89,341 rows</div></div>
+              <div class="tbl-item"><div class="tbl-ind"></div><div class="tbl-n">user_logs</div><div class="tbl-r">234,901 rows</div></div>
+              <div class="tbl-item"><div class="tbl-ind"></div><div class="tbl-n">audit_trail</div><div class="tbl-r">18,209 rows</div></div>
+              <div class="tbl-item"><div class="tbl-ind"></div><div class="tbl-n">policy_overrides</div><div class="tbl-r">341 rows</div></div>
+              <div class="tbl-item"><div class="tbl-ind"></div><div class="tbl-n">scan_results</div><div class="tbl-r">1,024 rows</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──── REPORTS PAGE ──── -->
+    <div class="page" id="page-reports">
+      <div class="metrics" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+        <div class="mc"><div class="mc-glow"></div><div class="mc-top"><div class="mc-label">This Week</div><div class="mc-icon">📊</div></div><div class="mc-val">94%</div><div class="mc-sub up">↑ 3% vs last week</div></div>
+        <div class="mc"><div class="mc-glow"></div><div class="mc-top"><div class="mc-label">Resolved</div><div class="mc-icon">✅</div></div><div class="mc-val">8</div><div class="mc-sub up">Violations closed</div></div>
+        <div class="mc"><div class="mc-glow"></div><div class="mc-top"><div class="mc-label">Pending</div><div class="mc-icon">⏳</div></div><div class="mc-val">17</div><div class="mc-sub warn">Require action</div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">Compliance Trend — Last 7 Scans</div><div class="ca">Export PDF →</div></div>
+        <div style="padding:22px"><canvas id="trendChart" width="900" height="210"></canvas></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ── MODAL ── -->
+<div class="overlay" id="overlay" onclick="closeM(event)">
+  <div class="modal">
+    <div class="mh">
+      <div class="mt"><span>🤖</span> AI Violation Analysis</div>
+      <div class="mcl" onclick="closeM()">✕</div>
+    </div>
+    <div class="mb">
+      <div class="minfo">
+        <div class="mchip"><div class="mchip-l">Record ID</div><div class="mchip-v" id="m-id">—</div></div>
+        <div class="mchip"><div class="mchip-l">Entity Name</div><div class="mchip-v" id="m-en">—</div></div>
+        <div class="mchip"><div class="mchip-l">Last Transaction</div><div class="mchip-v" id="m-dt">—</div></div>
+        <div class="mchip"><div class="mchip-l">Risk Level</div><div class="mchip-v" id="m-rk">—</div></div>
+        <div class="mchip wide"><div class="mchip-l">Violated Policy Rule</div><div class="mchip-v" id="m-pl" style="color:var(--purple2)">—</div></div>
+      </div>
+      <div class="ai-box">
+        <div class="ai-lbl"><div class="ai-lbl-dot"></div>PolicyGuard AI Analysis</div>
+        <div class="ai-txt" id="m-txt"></div>
+      </div>
+      <div class="macts">
+        <button class="mact app" onclick="doAct('approve')">✓ Approve Action</button>
+        <button class="mact dis" onclick="doAct('dismiss')">✕ Dismiss</button>
+        <button class="mact esc" onclick="doAct('escalate')">↑ Escalate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── THREE.JS SCENE ── */
+const bgC = document.getElementById('three-bg');
+const bgR = new THREE.WebGLRenderer({canvas:bgC,alpha:true,antialias:true});
+bgR.setPixelRatio(Math.min(devicePixelRatio,2));
+bgR.setSize(innerWidth,innerHeight);
+const bgS = new THREE.Scene();
+const bgCam = new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
+bgCam.position.z = 6;
+
+// Particle cloud
+const N = 200, pos = new Float32Array(N*3);
+for(let i=0;i<N;i++){
+  pos[i*3]=(Math.random()-.5)*30;
+  pos[i*3+1]=(Math.random()-.5)*20;
+  pos[i*3+2]=(Math.random()-.5)*12;
+}
+const pG = new THREE.BufferGeometry();
+pG.setAttribute('position',new THREE.BufferAttribute(pos,3));
+const pM = new THREE.PointsMaterial({color:0x00d4ff,size:0.035,transparent:true,opacity:0.25,blending:THREE.AdditiveBlending,depthWrite:false});
+const pts = new THREE.Points(pG,pM);
+bgS.add(pts);
+
+// Purple particles
+const N2=80, pos2=new Float32Array(N2*3);
+for(let i=0;i<N2;i++){pos2[i*3]=(Math.random()-.5)*30;pos2[i*3+1]=(Math.random()-.5)*20;pos2[i*3+2]=(Math.random()-.5)*10;}
+const pG2=new THREE.BufferGeometry();
+pG2.setAttribute('position',new THREE.BufferAttribute(pos2,3));
+const pM2=new THREE.PointsMaterial({color:0x7c3aed,size:0.05,transparent:true,opacity:0.2,blending:THREE.AdditiveBlending,depthWrite:false});
+bgS.add(new THREE.Points(pG2,pM2));
+
+// Grid
+const gMat=new THREE.LineBasicMaterial({color:0x0f1e3a,transparent:true,opacity:0.5});
+const gGrp=new THREE.Group();
+for(let i=-12;i<=12;i+=2.5){
+  const hG=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-12,i,0),new THREE.Vector3(12,i,0)]);
+  const vG=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(i,-12,0),new THREE.Vector3(i,12,0)]);
+  gGrp.add(new THREE.Line(hG,gMat),new THREE.Line(vG,gMat));
+}
+gGrp.position.z=-4; bgS.add(gGrp);
+
+// Big wireframe shield
+const shG=new THREE.OctahedronGeometry(2,0);
+const shM=new THREE.MeshBasicMaterial({color:0x00d4ff,wireframe:true,transparent:true,opacity:0.05});
+const sh=new THREE.Mesh(shG,shM); sh.position.set(9,0,-1); bgS.add(sh);
+const shG2=new THREE.IcosahedronGeometry(3,0);
+const shM2=new THREE.MeshBasicMaterial({color:0x7c3aed,wireframe:true,transparent:true,opacity:0.04});
+const sh2=new THREE.Mesh(shG2,shM2); sh2.position.set(9,0,-1); bgS.add(sh2);
+
+let mx=0,my=0;
+document.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth-.5)*.4;my=(e.clientY/innerHeight-.5)*.3;});
+
+function bgLoop(){
+  requestAnimationFrame(bgLoop);
+  const t=Date.now()*.001;
+  pts.rotation.y=t*.015; pts.rotation.x=t*.008;
+  sh.rotation.y=t*.3; sh.rotation.x=t*.15;
+  sh2.rotation.y=-t*.2; sh2.rotation.z=t*.1;
+  bgCam.position.x+=(mx-bgCam.position.x)*.025;
+  bgCam.position.y+=(-my-bgCam.position.y)*.025;
+  bgR.render(bgS,bgCam);
+}
+bgLoop();
+window.addEventListener('resize',()=>{bgCam.aspect=innerWidth/innerHeight;bgCam.updateProjectionMatrix();bgR.setSize(innerWidth,innerHeight);});
+
+/* ── LOGO 3D ── */
+const lC=document.getElementById('logo-canvas');
+const lR=new THREE.WebGLRenderer({canvas:lC,alpha:true,antialias:true});
+lR.setPixelRatio(2); lR.setSize(38,38);
+const lS=new THREE.Scene();
+const lCam=new THREE.PerspectiveCamera(50,1,0.1,100);
+lCam.position.z=3;
+const lGeo=new THREE.OctahedronGeometry(1,0);
+const lMat=new THREE.MeshBasicMaterial({color:0x00d4ff,wireframe:true,transparent:true,opacity:0.9});
+const lMesh=new THREE.Mesh(lGeo,lMat); lS.add(lMesh);
+function logoLoop(){requestAnimationFrame(logoLoop);lMesh.rotation.y+=0.015;lMesh.rotation.x+=0.008;lR.render(lS,lCam);}
+logoLoop();
+
+/* ── HEALTH DONUT ── */
+let hProg=0;
+function drawDonut(p){
+  const c=document.getElementById('hc'); if(!c)return;
+  const ctx=c.getContext('2d'),cx=94,cy=94,r=72,lw=13;
+  ctx.clearRect(0,0,188,188);
+  // Track
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(15,30,58,0.8)'; ctx.lineWidth=lw; ctx.stroke();
+  // Glow ring
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,(p/100)*Math.PI*2-Math.PI/2);
+  ctx.strokeStyle='rgba(0,212,255,0.12)'; ctx.lineWidth=lw+10; ctx.lineCap='round'; ctx.stroke();
+  // Fill
+  const g=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+  g.addColorStop(0,'#5b21b6'); g.addColorStop(0.5,'#7c3aed'); g.addColorStop(1,'#00d4ff');
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,(p/100)*Math.PI*2-Math.PI/2);
+  ctx.strokeStyle=g; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
+}
+function animDonut(){
+  if(hProg<94){hProg=Math.min(hProg+1.2,94);drawDonut(hProg);requestAnimationFrame(animDonut);}
+}
+setTimeout(animDonut,300);
+
+/* ── TREND CHART ── */
+function drawTrend(){
+  const c=document.getElementById('trendChart'); if(!c)return;
+  const ctx=c.getContext('2d'),w=c.width,h=c.height;
+  const data=[88,85,90,87,91,92,94], labels=['Scan 1','Scan 2','Scan 3','Scan 4','Scan 5','Scan 6','Today'];
+  const pd=44, mn=80, mx2=100;
+  ctx.clearRect(0,0,w,h);
+  // Grid
+  for(let i=0;i<=4;i++){
+    const y=pd+(h-2*pd)*i/4;
+    ctx.beginPath(); ctx.moveTo(pd,y); ctx.lineTo(w-pd,y);
+    ctx.strokeStyle=`rgba(15,30,58,${i===4?0.8:0.4})`; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='rgba(100,116,139,0.6)'; ctx.font='10px JetBrains Mono,monospace'; ctx.textAlign='right';
+    ctx.fillText((100-(mn)-(i*(100-mn)/4)).toFixed(0)+'%',pd-6,y+4);
+  }
+  const xs=(w-2*pd)/(data.length-1);
+  const toY=v=>pd+(h-2*pd)*(1-(v-mn)/(mx2-mn));
+  // Gradient fill
+  const fg=ctx.createLinearGradient(0,pd,0,h-pd);
+  fg.addColorStop(0,'rgba(0,212,255,0.18)'); fg.addColorStop(1,'rgba(0,212,255,0)');
+  ctx.beginPath(); ctx.moveTo(pd,toY(data[0]));
+  data.forEach((v,i)=>ctx.lineTo(pd+i*xs,toY(v)));
+  ctx.lineTo(pd+(data.length-1)*xs,h-pd); ctx.lineTo(pd,h-pd);
+  ctx.closePath(); ctx.fillStyle=fg; ctx.fill();
+  // Line
+  const lg=ctx.createLinearGradient(pd,0,w-pd,0);
+  lg.addColorStop(0,'#7c3aed'); lg.addColorStop(0.5,'#a78bfa'); lg.addColorStop(1,'#00d4ff');
+  ctx.beginPath(); ctx.moveTo(pd,toY(data[0]));
+  data.forEach((v,i)=>ctx.lineTo(pd+i*xs,toY(v)));
+  ctx.strokeStyle=lg; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.stroke();
+  // Points + labels
+  data.forEach((v,i)=>{
+    const x=pd+i*xs, y=toY(v);
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2);
+    ctx.fillStyle=i===data.length-1?'#00d4ff':'#7c3aed'; ctx.fill();
+    ctx.strokeStyle='#020810'; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.fillStyle='rgba(148,163,184,0.8)'; ctx.font='10px JetBrains Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(labels[i],x,h-10);
+    ctx.fillStyle=i===data.length-1?'#00d4ff':'#e2e8f4';
+    ctx.font='bold 11px JetBrains Mono,monospace';
+    ctx.fillText(v+'%',x,y-12);
+  });
+}
+setTimeout(drawTrend,500);
+
+/* ── COUNTERS ── */
+function animCounters(){
+  document.querySelectorAll('[data-target]').forEach(el=>{
+    const t=parseInt(el.dataset.target), sx=el.dataset.suffix||'';
+    let c=0; const step=t/55;
+    const ti=setInterval(()=>{c=Math.min(c+step,t);el.textContent=Math.floor(c).toLocaleString()+sx;if(c>=t)clearInterval(ti);},16);
+  });
+}
+setTimeout(animCounters,150);
+
+/* ── BARS ── */
+setTimeout(()=>{document.querySelectorAll('.bar-f[data-w]').forEach(el=>el.style.width=el.dataset.w);},500);
+
+/* ── NAV ── */
+const titles={dashboard:'Compliance Dashboard',violations:'All Violations',policies:'Policy Upload',database:'Database Connect',reports:'Reports'};
+function goPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  document.getElementById('pgTitle').textContent=titles[id]||id;
+  document.getElementById('pgPath').textContent='PolicyGuard / '+(titles[id]||id);
+  if(id==='reports')setTimeout(drawTrend,80);
+}
+
+/* ── SCAN ── */
+function runScan(){
+  const btn=document.getElementById('scanBtn');
+  const ico=document.getElementById('scanIco');
+  const txt=document.getElementById('scanTxt');
+  const sw=document.getElementById('sweep');
+  btn.classList.add('scanning');
+  ico.classList.add('spin'); ico.textContent='⟳';
+  txt.textContent='Scanning...';
+  sw.classList.remove('go'); void sw.offsetWidth; sw.classList.add('go');
+  setTimeout(()=>{
+    btn.classList.remove('scanning');
+    ico.classList.remove('spin'); ico.textContent='▶';
+    txt.textContent='Run Scan Now';
+    document.getElementById('lsTime').textContent='just now';
+    // Insert activity
+    const al=document.getElementById('actLog');
+    const now=new Date();
+    const ts=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    const ni=document.createElement('div');
+    ni.className='act-item';
+    ni.innerHTML=`<div class="act-time">${ts}</div><div class="act-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div><div class="act-txt">Scan complete: <strong>12,480 records</strong> checked</div>`;
+    al.insertBefore(ni,al.firstChild);
+    showToast('✓ Scan complete — 12,480 records checked · 17 violations found','var(--green)');
+  },2100);
+}
+
+/* ── MODAL ── */
+function openM(id,en,dt,st,pl,rk,txt){
+  document.getElementById('m-id').textContent=id;
+  document.getElementById('m-en').textContent=en;
+  document.getElementById('m-dt').textContent=dt;
+  document.getElementById('m-pl').textContent=pl;
+  const rkEl=document.getElementById('m-rk');
+  rkEl.textContent=rk;
+  rkEl.style.color=rk==='CRITICAL'?'var(--red)':rk==='HIGH'?'var(--yellow)':'var(--purple2)';
+  // Typewriter
+  const el=document.getElementById('m-txt');
+  el.innerHTML='<span class="tw-cursor"></span>';
+  let i=0;
+  const ti=setInterval(()=>{
+    if(i<txt.length){el.innerHTML=txt.slice(0,++i)+'<span class="tw-cursor"></span>';}
+    else{el.innerHTML=txt;clearInterval(ti);}
+  },14);
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeM(e){
+  if(!e||e.target===document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('open');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('overlay').classList.remove('open');});
+
+function doAct(t){
+  closeM();
+  const msgs={approve:'✓ Action approved — remediation scheduled',dismiss:'✕ Violation dismissed and logged',escalate:'↑ Escalated to Legal Team'};
+  const cols={approve:'var(--green)',dismiss:'var(--text2)',escalate:'var(--red)'};
+  showToast(msgs[t],cols[t]);
+}
+
+/* ── TOAST ── */
+let toastT;
+function showToast(msg,color='var(--cyan)'){
+  const t=document.getElementById('toast');
+  t.innerHTML=`<span style="color:${color};font-size:16px">●</span> ${msg}`;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),3800);
+}
+
+/* ── UPLOAD ── */
+function handleUp(inp){
+  if(!inp.files[0])return;
+  showToast(`📄 Processing ${inp.files[0].name}...`,'var(--purple2)');
+  setTimeout(()=>showToast(`✓ ${inp.files[0].name} — 38 rules extracted`,'var(--green)'),2400);
+}
+const uz=document.querySelector('.upzone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');showToast('📄 File received — processing...','var(--purple2)');});
+
+/* ── RULES TOGGLE ── */
+function togR(el){
+  const l=el.nextElementSibling, o=l.classList.toggle('open');
+  el.textContent=(o?'▼':'▶')+el.textContent.slice(1);
+}
+
+/* ── DB TEST ── */
+function testConn(){
+  const b=document.getElementById('tbtn'), i=document.getElementById('tbtnI');
+  b.style.opacity='.6'; i.textContent='⟳';
+  i.style.animation='spin .5s linear infinite';
+  setTimeout(()=>{
+    b.classList.add('ok'); i.style.animation=''; i.textContent='✓';
+    b.childNodes[1].textContent=' Connected Successfully';
+    b.style.opacity='1';
+    showToast('✓ Database connected — 6 tables discovered','var(--green)');
+  },1600);
+}
+</script>
+</body>
+</html>
