@@ -1,4 +1,4 @@
-# PolicyGuard — AI Compliance Intelligence
+# PolicyPilot — AI Compliance Intelligence
 
 A comprehensive dashboard for AI Compliance Intelligence, featuring real-time policy monitoring, risk assessment, and detailed compliance reporting for AI integrations. Designed for Hackfest Hackathon Project.
 
